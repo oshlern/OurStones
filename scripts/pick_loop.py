@@ -13,6 +13,7 @@ MAX_FZ = -10
 TORQUE_THRESH = 0.1
 MAX_ADJUST = 0.1
 ITER_LIMIT = 10
+Z_HAT = np.array([0,0,1])
 
 def place_attempt(overhead_pose):
     arm.move_to(overhead_pose)
@@ -33,9 +34,14 @@ def place_attempt(overhead_pose):
         return "Object Released"
     else:
         x, y, z, roll, pitch, yaw = arm.workspace_pose()
-        r = np.cross(np.array([0,0,1]), np.array([Tx,Ty,Tz]))
+        r = np.cross(Z_HAT, np.array([Tx,Ty,Tz]))
         r_scaled = r / Fz # Fz = F_N. Since we calibrated to include gravity
         # r_unit =  r/ np.linalg.norm(r)
+        F_N = np.array([Fx, Fy, Fz])
+        normal_vec = F_N / np.linalg.norm(F_N)
+        r_to_flat = - np.cross(normal_vec, np.cross(normal_vec, Z_HAT))
+        r_to_COM = - np.cross(normal_vec, np.cross(normal_vec, r))
+
         if np.linalg.norm(r_scaled) > MAX_ADJUST:
             r_scaled *= MAX_ADJUST / np.linalg.norm(r_scaled)
 
@@ -53,6 +59,7 @@ def place_loop(initial_pose):
             break
 
 def main():
+    gripper.calibrate()
     pick_up_rock()
     force_torque.calibrate()
     arm.tuck()
@@ -60,6 +67,8 @@ def main():
     place_loop(initial_pose)
 
 
+
+# r = Fhat cross (z cross Fhat)
 
 
 
@@ -169,3 +178,5 @@ def main():
 #     pose.position.y += 0.1
 #     plan = planner.plan_to_pose(pose)
 #     planner.execute_plan(plan)
+
+# What if COM not centered in gripper?
