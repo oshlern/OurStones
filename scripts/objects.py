@@ -1,4 +1,5 @@
 import numpy as np
+import rospy
 
 from geometry_msgs.msg import Pose
 
@@ -72,11 +73,43 @@ class ForceTorqueSensor(Object):
         FT = None # TODO
         return FT
 
+class Gripper(Object):
+    def __init__(self):
+        self.gripper = robot_gripper.Gripper('right')
+
+    def calibrate(self):
+        # Calibrate the gripper (other commands won't work unless you do this first)
+        print('Calibrating Gripper...')
+        self.gripper.calibrate()
+        rospy.sleep(1.0)
+
+        # Close the right gripper
+        print('Closing...')
+        self.gripper.close()
+        rospy.sleep(0.6)
+
+        # Open the right gripper
+        print('Opening...')
+        self.gripper.open()
+        rospy.sleep(0.7)
+        print('Done!')
+    
+    def close(self):
+        # gripper.close(block=True)
+        gripper.close()
+        rospy.sleep(0.5)
+
+    def open(self):
+        # gripper.open(block=True)
+        gripper.open()
+        rospy.sleep(0.5)
+
+
 Z_HAT = np.array([0,0,1])
 
 class Robot(Object):
     def __init__(self, gripper, planner, arm, camera, ft_sensor):
-        self.gripper = sawyer_gripper.Gripper("right")
+        self.gripper = Gripper()
         self.planner = PathPlanner('{}_arm'.format("right"))
         self.arm = Arm(planner)
         self.camera = Camera()
