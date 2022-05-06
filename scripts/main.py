@@ -1,6 +1,7 @@
 import numpy as np
-import cv2
+# import cv2
 import argparse
+import rospy
 # from src.objects import Robot
 # from utils import rotation_from_quaternion, create_transform_matrix, quaternion_from_matrix
 # import trimesh
