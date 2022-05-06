@@ -1,12 +1,8 @@
 import numpy as np
-# import cv2
 import argparse
 import rospy
 from src.objects import Robot, Gripper, Arms, Camera, ForceTorqueSensor
-# from utils import rotation_from_quaternion, create_transform_matrix, quaternion_from_matrix
-# import trimesh
-# from policies import GraspingPolicy
-# import matplotlib.pyplot as plt
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
