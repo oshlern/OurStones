@@ -5,16 +5,22 @@ import numpy as np
 Z_HAT = np.array([0,0,1])
 
 class Robot(Object):
-    def __init__(self, gripper_args, arm_args, camera_args, ft_sensor_args):
-        self.gripper = Gripper(*gripper_args)
-        self.arm = Arm(*arm_args)
-        self.camera = Camera(*camera_args)
-        self.ft_sensor = ForceTorqueSensor(*ft_sensor_args)
+    def __init__(self, gripper, arm, camera, ft_sensor):
+        self.gripper = gripper
+        self.arm = arm
+        self.camera = camera
+        self.ft_sensor = ft_sensor
 
         self.balance_threshold = 0.1 # min |torque|/|force| to consider balanced
         self.max_adjustment = 0.1
         self.max_iterations = 10
         self.max_force = 10
+    
+    # def __init__(self, gripper_args, arm_args, camera_args, ft_sensor_args):
+    #     self.gripper = Gripper(*gripper_args)
+    #     self.arm = Arm(*arm_args)
+    #     self.camera = Camera(*camera_args)
+    #     self.ft_sensor = ForceTorqueSensor(*ft_sensor_args)
 
     def place_attempt(self, overhead_position, orientation):
         self.arm.move_to(overhead_position, orientation)

@@ -1,47 +1,54 @@
 
 import numpy as np
 from geometry_msgs.msg import Pose
+import rtde_control
+import rtde_receive
 
-
-QUAT_DOWN = [0.727, -0.686, 0.038, 0.002]
-DEFAULT_POSITION = [0.752, -0.35, 0.02]
+DOWN_ROTATION = None #[0.,0.,0.]
+DEFAULT_POSITION = None #[0.752, -0.35, 0.02]
 
 class Arm(Object):
-    def __init__(self, planner_args=['{}_arm'.format("right")]):
-        self.planner = PathPlanner(*planner_args)
-        self.tuck_position = DEFAULT_POSITION
-    
-    def read_pose(self):
-        pose = None # TODO
-        position = pose[:3]
-        quaternion = pose[3:]
-        return position, quaternion
+    def __init__(self, ip="172.22.22.2"):
+        self.ip = ip
+        self.rtde_c = rtde_control.RTDEControlInterface(self.ip)
+        self.rtde_r = rtde_receive.RTDECReveiveInterface(self.ip)
 
-    def move_to(self, position, quaternion=QUAT_DOWN, position_name=""):
-        if self.out_of_bounds(position, quaternion):
+        self.MIN_X, self.MAX_X = -1, 1
+        self.MIN_Y, self.MAX_Y = -1, 1
+        self.MIN_Z, self.MAX_Z = -1, 1
+
+    def read_pose(self):
+        pose = self.rtde_r.getActualTCPPose()
+        position = pose[:3]
+        rotation = pose[3:]
+        return position, rotation
+
+    def move_to(self, position, rotation=DOWN_ROTATION, position_name=""):
+        if self.out_of_bounds(position, rotation):
             raise Exception("Out of bounds with position: {}, quat: {}".format(position, quaternion))
-        pose = Pose()
-        pose.position.x, pose.position.y, pose.position.z = position
-        pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = quaternion
-        plan = self.planner.plan_to_pose(pose)
+        # pose = Pose()
+        # pose.position.x, pose.position.y, pose.position.z = position
+        # pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = quaternion
+        # plan = self.planner.plan_to_pose(pose)
+        # self.planner.execute_plan(plan)
         print("Moving to {} position: {}".format(position_name, pose.position))
-        self.planner.execute_plan(plan)
+        self.rtde_c.moveL(*position, *rotation)
 
     def tuck(self):
-        self.move_to(DEFAULT_POSITION, position_name="tucked")
-    
+        self.move_to(DEFAULT_POSITION, DOWN_ROTATION, position_name="tucked")
+
     def move_relative(self, displacement):
         dx, dy, dz = displacement
-        current_position, current_quat = self.read_pose()
-        target_position = current_position
+        cur_position, cur_rotation = self.read_pose()
+        target_position = cur_position
         target_position[0] += dx
         target_position[1] += dy
         target_position[2] += dz
-        self.move_to(target_position, current_quat)
+        self.move_to(target_position, cur_rotation)
     
     # def set_vel(self, vx, vy, vz): (rotation too)
 
-    def out_of_bounds(self, position, quaternion):
+    def out_of_bounds(self, position, rotation):
         out = False
         if self.MIN_X < position[0] < self.MAX_X:
             out = True
