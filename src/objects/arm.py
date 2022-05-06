@@ -7,8 +7,8 @@ QUAT_DOWN = [0.727, -0.686, 0.038, 0.002]
 DEFAULT_POSITION = [0.752, -0.35, 0.02]
 
 class Arm(Object):
-    def __init__(self, planner):
-        self.planner = planner
+    def __init__(self, planner_args=['{}_arm'.format("right")]):
+        self.planner = PathPlanner(*planner_args)
         self.tuck_position = DEFAULT_POSITION
     
     def read_pose(self):
