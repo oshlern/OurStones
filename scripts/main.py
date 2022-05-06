@@ -7,20 +7,6 @@ import argparse
 # from policies import GraspingPolicy
 # import matplotlib.pyplot as plt
 
-try:
-    import rospy
-    import tf
-    from cv_bridge import CvBridge
-    from geometry_msgs.msg import Pose
-    from sensor_msgs.msg import Image, CameraInfo
-    from baxter_interface import gripper as baxter_gripper
-    from intera_interface import gripper as sawyer_gripper
-    from path_planner import PathPlanner
-    ros_enabled = True
-except:
-    print('Couldn\'t import ROS.  I assume you\'re running this on your laptop')
-    ros_enabled = False
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-ip', type=str, default='172.22.22.2', help=
@@ -53,7 +39,11 @@ if __name__ == '__main__':
 
     robot = Robot(gripper, arm, camera, ft_sensor)
 
-    robot.main()
+    arm.tuck()
+
+
+
+    # robot.main()
 
         # camera_frame = ''
         # if args.robot == 'baxter':

@@ -4,8 +4,8 @@ from geometry_msgs.msg import Pose
 import rtde_control
 import rtde_receive
 
-DOWN_ROTATION = None #[0.,0.,0.]
-DEFAULT_POSITION = None #[0.752, -0.35, 0.02]
+DOWN_ROTATION = [2.925, 1.139, 0.028]
+DEFAULT_POSITION = [0.054, 0.379, 0.457]
 
 class Arm(Object):
     def __init__(self, ip="172.22.22.2"):
@@ -13,9 +13,12 @@ class Arm(Object):
         self.rtde_c = rtde_control.RTDEControlInterface(self.ip)
         self.rtde_r = rtde_receive.RTDECReveiveInterface(self.ip)
 
-        self.MIN_X, self.MAX_X = -1, 1
-        self.MIN_Y, self.MAX_Y = -1, 1
-        self.MIN_Z, self.MAX_Z = -1, 1
+        self.MIN_X, self.MAX_X = -0.3, 0.3
+        self.MIN_Y, self.MAX_Y = 0., 0.6
+        self.MIN_Z, self.MAX_Z = 0.272, 0.8
+
+        self.speed = 0.01
+        self.accel = 0.25
 
     def read_pose(self):
         pose = self.rtde_r.getActualTCPPose()
@@ -31,8 +34,9 @@ class Arm(Object):
         # pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = quaternion
         # plan = self.planner.plan_to_pose(pose)
         # self.planner.execute_plan(plan)
-        print("Moving to {} position: {}".format(position_name, pose.position))
-        self.rtde_c.moveL(*position, *rotation)
+        print("Moving to {} position: {}".format(position_name, position))
+        
+        self.rtde_c.moveL(list(position) + list(rotation), self.speed, self.accel)
 
     def tuck(self):
         self.move_to(DEFAULT_POSITION, DOWN_ROTATION, position_name="tucked")
