@@ -9,5 +9,5 @@ class Camera(object):
         return guessed_pose
 
     def get_rock_position(self):
-        initial_rock_position = np.array([-0.103,0.379,0.296])
+        initial_rock_position = np.array([-0.103,0.379,0.29])
         return initial_rock_position

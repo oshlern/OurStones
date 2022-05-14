@@ -45,10 +45,10 @@ class Robot(object):
         self.camera = camera
         self.ft_sensor = ft_sensor
 
-        self.balance_threshold = 0.01 # min |torque|/|force| to consider balanced
+        self.balance_threshold = 0.015 # min |torque|/|force| to consider balanced
         self.max_adjustment = 0.02
         self.max_iterations = 10
-        self.max_force = 1.0
+        self.max_force = 5.0 # placement force in newtons
         print("Initialized Robot")
 
     # def __init__(self, gripper_args, arm_args, camera_args, ft_sensor_args):
@@ -113,7 +113,7 @@ class Robot(object):
                 break
 
 
-    def analyze_placement(self, wrench, pose, rot, alpha=1.5, visualize=False):
+    def analyze_placement(self, wrench, pose, rot, alpha=0.2, visualize=False):
         F, T = wrench[:3], wrench[3:]
         if visualize:
             visualize_wrench_3d(wrench)
@@ -123,11 +123,28 @@ class Robot(object):
         F_normal = F[2]
         r_scaled = alpha * r / F_normal
         if np.linalg.norm(r_scaled) > self.max_adjustment:
+            print("Using max step size")
             r_scaled = (r_scaled / np.linalg.norm(r_scaled)) * self.max_adjustment
         step = self.R_base_gripper @ r_scaled
         return step
 
+    def place(self, pose):
+        # Start at overhead position and work downwards
+        self.arm.move_to(pose + 0.02 * Z_HAT)
+        self.arm.set_vel([0,0,-0.005,0,0,0])
+        # Move down until contact
+        while not (-self.ft_sensor.read_force_torque()[2] > self.max_force):
+            pass
+            # self.arm.set_vel([0,0,-0.01,0,0,0])
+        self.arm.stop_speed_control()
+        time.sleep(0.1)
+        return self.arm.read_pose()
+
     def place_rock(self, pose_estimate, record=True):
+        force_zero = self.zero_point * np.array([1,1,1,0,0,0])
+        torque_zero = self.placement_zero * np.array([0,0,0,1,1,1])
+
+
         target_pose = pose_estimate
         data = []
         def recorder(wrench):
@@ -138,13 +155,17 @@ class Robot(object):
         def place(pose):
             # Start at overhead position and work downwards
             self.arm.move_to(pose + 0.02 * Z_HAT)
-            self.arm.set_vel([0,0,-0.01,0,0,0])
+            self.arm.set_vel([0,0,-0.005,0,0,0])
             # Move down until contact
-            while not (-get_ft()[2] > self.max_force):
+            while not (-get_ft()[2] - self.zero_point[2] > self.max_force):
                 pass
+                # self.arm.set_vel([0,0,-0.01,0,0,0])
             self.arm.stop_speed_control()
-            time.sleep(0.1)
+            time.sleep(3)
             return self.arm.read_pose()
+
+        def score(ft):
+            return np.max(np.abs((ft[3:-1] - torque_zero[3:-1]) / (ft[2] - force_zero[2])))
 
 
         # for i in range(30):
@@ -160,10 +181,11 @@ class Robot(object):
         # pickle.dump(data, f)
         # import pdb; pdb.set_trace()
 
-        N_samples = 20
+        N_samples = 1
 
         current_pose, current_rot = place(target_pose)
         scores = []
+        fzs = []
 
         data = []
         ft = np.zeros(6)
@@ -179,11 +201,14 @@ class Robot(object):
         # ft = get_ft()
 
         # Ignore the first score since it seems to be inacurate
-        scores.append(1)
-        print("Placement Score:", np.max(np.abs(ft[3:-1] / ft[2])), '\n')
+        scores.append(score(ft))
+        fzs.append(ft[2])
+        print("Force in z:", fzs[-1])
+        print("Placement Score:", scores[-1], '\n')
 
         while scores[-1] > self.balance_threshold:
-            step = self.analyze_placement(ft  - self.zero_point, current_pose, current_rot)
+            # step = self.analyze_placement(ft  - force_zero - torque_zero, current_pose, current_rot)
+            step = self.analyze_placement(ft  - force_zero, current_pose, current_rot)
             print("F/T:", ft)
             print("Step:", step)
             current_pose, current_rot = place(current_pose + step)
@@ -201,10 +226,15 @@ class Robot(object):
 
 
             # ft = get_ft()
-            scores.append(np.max(np.abs(ft[3:-1] / ft[2])))
+            scores.append(score(ft))
+            fzs.append(ft[2])
+
+            print("Force in z:", fzs[-1])
             print("Placement Score:", scores[-1], '\n')
 
-        print("\nscores:", scores, '\n')
+        print("\nzero point:", self.zero_point)
+        print("scores:", scores)
+        print("forces:", fzs, '\n')
 
         time.sleep(1)
         self.gripper.open()
@@ -223,22 +253,43 @@ class Robot(object):
         self.arm.tuck()
         self.arm.move_to(overhead_position, position_name="overhead", fast=True)
         # input("Press enter to continue")np.max(np.abs(ft[3:-1] / ft[2]))
-        self.arm.move_to(rock_position + Z_HAT * 0.01, position_name="rock_overhead", fast=True)
+        self.arm.move_to(rock_position + Z_HAT * 0.03, position_name="rock_overhead", fast=True)
         self.arm.move_to(rock_position, position_name="rock")
         print("Grasping rock")
         self.ft_sensor.calibrate()
         self.gripper.close()
         # self.ft_sensor.calibrate()
         print('ground FT', self.ft_sensor.read_force_torque())
-        self.arm.move_to(overhead_position, position_name="overhead")
+
+        # Record placement zero
+        N_samples = 50
+        self.place(rock_position)
+        ft = np.zeros(6)
+        for i in range(N_samples):
+            ft += self.ft_sensor.read_force_torque()
+            time.sleep(0.01)
+        ft /= N_samples
+        self.placement_zero = ft
+        print("Placement zero:", self.placement_zero)
+
+        self.arm.move_to(overhead_position, position_name="overhead", fast=True)
+
         time.sleep(3)
-        self.zero_point = self.ft_sensor.read_force_torque()
-        print('air FT', self.zero_point)
+        z = np.zeros(6)
+        for _ in range(100):
+            z += self.ft_sensor.read_force_torque()
+            time.sleep(0.01)
+        z /= 100
+
+        self.zero_point = z
+        print('air FT (zero pt)', self.zero_point)
         self.arm.tuck(tcp=True)
 
     def main(self):
         self.gripper.calibrate()
         # input("Press enter to continue")
         self.pick_up_rock()
-        self.place_rock(self.camera.estimate_place_position())
+        est_pose = self.camera.estimate_place_position()
+        est_pose[2] += 0.05
+        self.place_rock(est_pose)
         # self.place_loop(initial_position)

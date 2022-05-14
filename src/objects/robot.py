@@ -14,8 +14,8 @@ class Robot(Object):
         self.balance_threshold = 0.1 # min |torque|/|force| to consider balanced
         self.max_adjustment = 0.1
         self.max_iterations = 10
-        self.max_force = 10
-    
+        self.max_force = 20 # placement force
+
     # def __init__(self, gripper_args, arm_args, camera_args, ft_sensor_args):
     #     self.gripper = Gripper(*gripper_args)
     #     self.arm = Arm(*arm_args)
@@ -67,7 +67,7 @@ class Robot(Object):
                 break
 
     def pick_up_rock(self):
-        rock_position = self.camera.get_rock_position()    
+        rock_position = self.camera.get_rock_position()
         overhead_position = np.array([
             rock_position[0],
             rock_position[1],
@@ -88,4 +88,3 @@ class Robot(Object):
         self.arm.tuck()
         initial_position = self.camera.estimate_place_position()
         self.place_loop(initial_position)
-
