@@ -28,14 +28,14 @@ class Arm(Object):
 
     def move_to(self, position, rotation=DOWN_ROTATION, position_name=""):
         if self.out_of_bounds(position, rotation):
-            raise Exception("Out of bounds with position: {}, quat: {}".format(position, quaternion))
+            raise Exception("Out of bounds with position: {}, rotation: {}".format(position, rotation))
         # pose = Pose()
         # pose.position.x, pose.position.y, pose.position.z = position
         # pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = quaternion
         # plan = self.planner.plan_to_pose(pose)
         # self.planner.execute_plan(plan)
         print("Moving to {} position: {}".format(position_name, position))
-        
+
         self.rtde_c.moveL(list(position) + list(rotation), self.speed, self.accel)
 
     def tuck(self):
@@ -49,7 +49,7 @@ class Arm(Object):
         target_position[1] += dy
         target_position[2] += dz
         self.move_to(target_position, cur_rotation)
-    
+
     # def set_vel(self, vx, vy, vz): (rotation too)
 
     def out_of_bounds(self, position, rotation):
@@ -61,4 +61,4 @@ class Arm(Object):
         if self.MIN_Z < position[2] < self.MAX_Z:
             out = True
         return out
-        # TODO: account for orientation 
+        # TODO: account for orientation

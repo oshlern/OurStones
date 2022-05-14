@@ -1,26 +1,19 @@
+#!/usr/bin/env python3
 import rospy
 from geometry_msgs.msg import Wrench
+from ati_ft_msgs.srv import FTSrv
 
 class FT:
     data = None
-    # def __init__(self):
-    #     self.data = None
-    # def update(self, data):
-    #     self.data = data
-
-#def get_data():
- #   return data
 
 def cb(wrench):
- #   global data
     FT.data = wrench
-# = wrench
+
+def serve(req):
+    return FT.data
 
 if __name__ == "__main__":
-    #data = None
     rospy.init_node('ft_sub')
     sub = rospy.Subscriber('/ft', Wrench, cb)
+    svc = rospy.Service('get_ft_data', FTSrv, serve)
     rospy.spin()
-    for i in range(100):
-        print(FT.data)
-        rospy.sleep(0.5)
